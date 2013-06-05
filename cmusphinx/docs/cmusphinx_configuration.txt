@@ -1,0 +1,13 @@
+The cmusphinx libraries must be installed in two parts. First install sphinxbase and then
+install pocketsphinx
+
+Both can be installed with the following commands:
+
+./configure
+make
+sudo make install
+
+The source code for the cmusphinx libraries can be obtained from the following website:
+
+    http://cmusphinx.sourceforge.net/
+

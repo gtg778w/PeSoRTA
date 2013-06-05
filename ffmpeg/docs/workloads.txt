@@ -1,0 +1,92 @@
+Names of Encoding config files:
+
+enc.<media name>.<source format>.<destination format>.config
+
+Speech Encoding:
+    enc.arthur.wav.spx.config
+    enc.cc.wav.spx.config
+    enc.vf18.wav.spx.config
+    
+    enc.arthur.wav.opus.config
+    enc.cc.wav.opus.config
+    enc.vf18.wav.opus.config
+    
+    enc.arthur.wav.amr.config
+    enc.cc.wav.amr.config
+    enc.vf18.wav.amr.config
+    
+General Audio Encoding
+    enc.arthur.wav.mp3.config
+    enc.sintel.wav.mp3.config
+    enc.mozart.wav.mp3.config
+    enc.beethoven.wav.mp3.config
+    enc.dsailors.wav.mp3.config
+    
+    enc.arthur.wav.ogg.config
+    enc.sintel.wav.ogg.config
+    enc.mozart.wav.ogg.config
+    enc.beethoven.wav.ogg.config
+    enc.dsailors.wav.ogg.config
+
+Video Encoding
+    enc.bridge_close.y4m.mp4.confg  
+    enc.deadline.y4m.mp4.confg
+    enc.highway.y4m.mp4.confg
+    enc.mad900.y4m.mp4.confg
+
+    enc.bridge_close.y4m.webm.confg
+    enc.deadline.y4m.webm.confg
+    enc.highway.y4m.webm.confg
+    enc.mad900.y4m.webm.confg
+
+    enc.bridge_close.y4m.flv.confg
+    enc.deadline.y4m.flv.confg
+    enc.highway.y4m.flv.confg
+    enc.mad900.y4m.flv.confg
+    
+Names of Decoding config files:
+
+dec.<media name>.config
+
+Speech Decoding:
+    dec.arthur.spx.config
+    dec.cc.spx.config
+    dec.vf18.spx.config
+    
+    dec.arthur.opus.config
+    dec.cc.opus.config
+    dec.vf18.opus.config
+    
+    dec.arthur.amr.config
+    dec.cc.amr.config
+    dec.vf18.amr.config
+
+General Audio Decoding
+    dec.arthur.mp3.config
+    dec.sintel.mp3.config
+    dec.mozart.mp3.config
+    dec.beethoven.mp3.config
+    dec.dsailors.mp3.config
+    
+    dec.arthur.vorbis.config
+    dec.sintel.vorbis.config
+    dec.mozart.vorbis.config
+    dec.beethoven.vorbis.config
+    dec.dsailors.vorbis.config
+    
+Video Decoding
+    dec.highway.mp4.config
+    dec.deadline.mp4.config
+    dec.factory.mp4.config  
+    dec.sintel.mp4.config
+    
+    dec.highway.webm.config
+    dec.deadline.webm.config
+    dec.factory.webm.config  
+    dec.sintel.webm.config
+    
+    dec.highway.flv.config
+    dec.deadline.flv.config
+    dec.factory.flv.config  
+    dec.sintel.flv.config
+

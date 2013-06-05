@@ -1,0 +1,9 @@
+
+the final binary needs to seperately link to the cmusphinx libraries. 
+ 
+ The following is the list of required cmusphinx libraries:
+ 
+ libpocketsphinx 
+ libsphinxad 
+ libsphinxbase
+ 

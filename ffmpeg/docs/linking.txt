@@ -1,0 +1,32 @@
+
+ Depending on the configuration of ffmpeg, the final binary needs to seperately link to
+ the ffmpeg libraries and additional libraries required by ffmpeg. 
+ 
+ The following is the list of required ffmpeg libraries:
+ 
+ libavformat 
+ libswresample 
+ libswscale 
+ libavcodec
+ libavfilter 
+ libavutil
+ 
+ Note that the order of the above libraries matter, because functions provided by
+ libavutil are referenced by the preceding libraries.
+ 
+ The following list of additional libraries may also be required depending on how ffmpeg
+ was configured:
+ 
+ libgsm 
+ libmp3lame 
+ libopencore-amrnb 
+ libopus
+ libspeex 
+ libvorbis 
+ libvorbisenc
+ libvpx 
+ libx264
+
+ libz
+ libm
+ 

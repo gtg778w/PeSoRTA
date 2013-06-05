@@ -1,0 +1,1 @@
+This folder will contain executables as built by the Makefiles. However, you don't really want git to commit executables.

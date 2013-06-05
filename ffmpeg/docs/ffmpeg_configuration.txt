@@ -1,0 +1,17 @@
+ffmpeg uses a number of external libraries to provide support for certain media formats.
+
+The following command will download and install some of those libraries on Ubuntu.
+
+sudo apt-get install libmp3lame-dev libopencore-amrnb-dev libspeex-dev libvpx-dev libx264-dev libvorbis-dev libspeex-dev
+
+Lib opus and some of the others libraries may have to be installed manually from source. In such cases, the libraries may be installed in '/usr/local/lib'. If errors are incurred relating to missing shared libraries, use the ldconfig command.
+
+Use the following configuration command to configure the ffmpeg source to use the above libraries.
+
+./configure --enable-gpl --enable-version3 --disable-avdevice --disable-pthreads --disable-network --disable-hwaccels --disable-indevs --disable-outdevs --disable-devices --enable-bzlib --enable-libmp3lame --enable-libvorbis --enable-libopencore-amrnb --enable-libopus --enable-libspeex --enable-libvpx --enable-libx264 --enable-zlib --enable-hardcoded-tables --disable-debug --enable-extra-warnings --disable-stripping
+
+ffmpeg can then be built and installed with the following command.
+
+make
+sudo make install
+
