@@ -17,7 +17,6 @@
  The following list of additional libraries may also be required depending on how ffmpeg
  was configured:
  
- libgsm 
  libmp3lame 
  libopencore-amrnb 
  libopus
@@ -28,5 +27,6 @@
  libx264
 
  libz
+ libbz2
  libm
  

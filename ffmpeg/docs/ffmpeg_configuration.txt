@@ -4,7 +4,7 @@ The following command will download and install some of those libraries on Ubunt
 
 sudo apt-get install libmp3lame-dev libopencore-amrnb-dev libspeex-dev libvpx-dev libx264-dev libvorbis-dev libspeex-dev
 
-Lib opus and some of the others libraries may have to be installed manually from source. In such cases, the libraries may be installed in '/usr/local/lib'. If errors are incurred relating to missing shared libraries, use the ldconfig command.
+Lib opus and some of the others libraries may have to be installed manually from source. In such cases, the libraries may be installed in '/usr/local/lib'. If errors are incurred relating to missing shared libraries, use the ldconfig command. In RPM-based systems like CentOS, opus may be available as opus and opus-dev
 
 Use the following configuration command to configure the ffmpeg source to use the above libraries.
 

@@ -22,9 +22,9 @@ $(APP_BINDIR)/ffmpeg_$(APP_NAME): $(APP_OBJS) libPeSoRTA
 	$(CC) $(APP_LIBFLAGS1) -L $(PeSoRTA_LIBDIR) -o $(APP_BINDIR)/ffmpeg_$(APP_NAME) \
 	$(APP_OBJS) $(APP_LIBFLAGS2) \
 	-lPeSoRTA_ffmpeg \
-	-lavformat -lswresample -lswscale -lavcodec -lpostproc -lavfilter -lavutil \
-	-lgsm -lmp3lame -lopencore-amrnb -lopus -lspeex -lvorbis -lvorbisenc -lvpx \
-	-lx264 -lz -lm
+	-lavformat -lswresample -lswscale -lavcodec -lavfilter -lavutil \
+	-lmp3lame -lopencore-amrnb -lopus -lspeex -lvorbis -lvorbisenc -lvpx \
+	-lx264 -lz -lbz2 -lm
 
 $(APP_BINDIR)/sqrwav_$(APP_NAME): $(APP_OBJS) libPeSoRTA
 	$(CC) $(APP_LIBFLAGS1) -L $(PeSoRTA_LIBDIR) -o $(APP_BINDIR)/sqrwav_$(APP_NAME) \
