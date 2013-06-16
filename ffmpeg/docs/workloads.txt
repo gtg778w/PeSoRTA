@@ -90,3 +90,11 @@ Video Decoding
     dec.factory.flv.config  
     dec.sintel.flv.config
 
+Long Audio:
+    dec.audio.bigbuckbunnyfull.mov.config
+    dec.audio.sintelfull.mkv.config 
+
+Long Video:
+    dec.bigbuckbunnyfull.mov.config
+    dec.sintelfull.mkv.config
+    

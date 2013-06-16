@@ -36,7 +36,7 @@ int main(int argc, char** argv)
     filename = argv[1];
    
     /*Read one packet at a time*/
-    batched = 0;
+    batched = 1;
      
     /*Initialize the decoder*/
     ret = fw_audio_init_decoder(filename, &decoder, batched);
