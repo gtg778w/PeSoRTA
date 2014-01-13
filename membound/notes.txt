@@ -1,0 +1,25 @@
+
+    commandline arguments
+        - filename
+        - index
+        - iterations
+    
+    initialize
+        get cacheline size
+        open the file
+        read the the size of one cache line
+        read the relevant int32 index of the cache line
+        
+        map the relevant offset from the file into the address space
+        mlock
+        
+        array = the start of the mapped region
+    
+    main loop
+        m = 1;
+        do
+        {
+            m = array[m].loop[index];
+            iterations--;
+        }while(iterations);
+
