@@ -8,6 +8,7 @@ dec.audio.sintelfull.mkv.config     0.03200
 dec.beethoven.mp3.config            0.024
 dec.beethoven.vorbis.config         n/a
 dec.bigbuckbunnyfull.mov.config     0.04167
+dec.bigbuckbunnyfull.480p.mov.config	0.04167
 dec.cc.amr.config                   0.02
 dec.cc.opus.config                  0.01
 dec.cc.spx.config                   0.02
@@ -30,6 +31,7 @@ dec.sintel.mp4.config               0.04167
 dec.sintel.vorbis.config            n/a
 dec.sintel.webm.config              0.04167
 dec.sintelfull.mkv.config           0.04167
+dec.sintelfull.720p.mkv.config      0.04167
 dec.vf18.amr.config                 0.02
 dec.vf18.opus.config                0.01
 dec.vf18.spx.config                 0.02
