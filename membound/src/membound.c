@@ -16,27 +16,7 @@ void*   mapped_region;
 size_t  mapped_region_size;
 int32_t *cache_line_array;
 
-static __inline__ uint64_t getns(void)
-{
-    struct timespec time;
-    int ret;
-    uint64_t now_ns;
-
-	ret = clock_gettime(CLOCK_MONOTONIC, &time);
-    if(ret == -1)
-    {
-        perror("clock_gettime failed");
-        exit(EXIT_FAILURE);
-    }
-    
-
-    now_ns = time.tv_sec * 1000000000;
-    now_ns = now_ns + time.tv_nsec;
-
-    return now_ns;
-}
-
-int32_t mainloop(int32_t doubleword_per_cacheline, int32_t cacheoffset, int64_t iterations)
+int32_t membound_mainloop(int32_t doubleword_per_cacheline, int32_t cacheoffset, int64_t iterations)
 {
     int32_t m;
     

@@ -1,4 +1,8 @@
 
+    PesorTA membound:
+    - design an interface similar to the square-wave workload
+    - multiple configurations
+
     commandline arguments
         - filename
         - index
@@ -22,4 +26,12 @@
             m = array[m].loop[index];
             iterations--;
         }while(iterations);
+
+
+    config file
+        - data file name
+        - loop index
+        - iterations/duration
+        - jobs
+    
 
