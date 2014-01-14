@@ -139,6 +139,11 @@ int membound_init(  membound_t  *membound_p,
     /*Determine the size of the desired memory mapped region from the data-file 
     header*/
     mapped_region_size = cacheline0[graph_index];
+    if(0 == mapped_region_size)
+    {
+        fprintf(stderr, "membound_init: invalid graph index %i.\n", graph_index);
+        goto error2;
+    }
     
     /*Map the data file into memory*/
     mapped_region = mmap(   NULL, mapped_region_size, 
