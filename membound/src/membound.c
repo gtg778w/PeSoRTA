@@ -12,75 +12,26 @@
 #include <time.h>
 #include <sched.h>
 
-void*   mapped_region;
-size_t  mapped_region_size;
-int32_t *cache_line_array;
+#include "membound.h"
 
-int32_t membound_mainloop(int32_t doubleword_per_cacheline, int32_t cacheoffset, int64_t iterations)
+int32_t membound_mainloop(membound_t *membound_p)
 {
     int32_t m;
+    int32_t *cacheline_array= membound_p->cacheline_array;
+    int32_t dword_per_cacheline = membound_p->dword_per_cacheline;
+    int32_t graph_index     = membound_p->graph_index;
+    int64_t loop_iterations = membound_p->loop_iterations;
     
     m = 1;
     do
     {
-        m = cache_line_array[(doubleword_per_cacheline*m) + cacheoffset];
-    }while(iterations--);
+        m = cacheline_array[(dword_per_cacheline*m) + graph_index];
+    }while(loop_iterations--);
     
-    return m;
+    return (int)m;
 }
 
-int realtime_init(double desired_priority)
-{
-    int ret = 0;
-    
-    /*Variables for the scheduler.*/
-    pid_t my_pid;
-    double max_priority;
-    double min_priority;
-    int set_priority;
-    struct sched_param sched_param;
-
-    my_pid = getpid();
-        
-    max_priority = (double)sched_get_priority_max(SCHED_FIFO);
-    if(max_priority == -1.0)        
-    {
-        perror("realtime_init: sched_get_priority_max failed");
-        ret = -1;
-        goto exit0;
-    }
-
-    min_priority = (double)sched_get_priority_min(SCHED_FIFO);
-    if(min_priority == -1.0)        
-    {
-        perror("realtime_init: sched_get_priority_min failed");
-        ret = -1;
-        goto exit0;
-    }
-
-    set_priority = (int)(   (desired_priority * max_priority)  +
-                            ((1.0 - desired_priority) * min_priority));
-
-    sched_param.sched_priority = set_priority;
-    ret = sched_setscheduler(my_pid, SCHED_FIFO, &sched_param);
-    if(ret == -1)
-    {
-        perror("realtime_init: sched_setsceduler failed");
-        goto exit0;
-    }
-
-    ret = mlockall(MCL_CURRENT);
-    if(ret == -1)
-    {
-        perror("realtime_init: mlock failed");
-        goto exit0;
-    }
-    
-exit0:
-    return ret;
-}
-
-int32_t get_doubleword_per_cacheline(void)
+static int32_t get_dword_per_cacheline( void )
 {
     int32_t ret = 0;
     long int cacheline_size;
@@ -89,7 +40,7 @@ int32_t get_doubleword_per_cacheline(void)
     filep = fopen("/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size", "r");
     if(NULL == filep)
     {
-        perror( "get_doubleword_per_cacheline: failed to open sysfs file for "
+        perror( "get_dword_per_cacheline: failed to open sysfs file for "
                 "cacheline size");
         ret = -1;
         goto error0;
@@ -98,7 +49,7 @@ int32_t get_doubleword_per_cacheline(void)
     ret = fscanf(filep, "%li", &cacheline_size);
     if(1 != ret)
     {
-        perror("get_doubleword_per_cacheline: fscanf failed");
+        perror("get_dword_per_cacheline: fscanf failed");
         ret = -1;
         goto error1;
     }
@@ -111,220 +62,118 @@ error0:
     return ret;
 }
 
-void cachelinearray_free(void)
+void membound_free(membound_t *membound_p)
 {
+    void *mapped_region = membound_p->mapped_region;
+    size_t mapped_region_size   = membound_p->mapped_region_size;
+    int fd  = membound_p->fd;
+    
     if(NULL != mapped_region)
     {
         munmap(mapped_region, mapped_region_size);
-        mapped_region = NULL;
-        mapped_region_size = 0;
+        close(fd);
+        *membound_p = (struct membound_s){0};
+        membound_p->fd = -1;
+        membound_p->graph_index = -1;
     }
 }
 
-int cachelinearray_init(int32_t doubleword_per_cacheline, int32_t graph_index, int fd)
+int membound_init(  membound_t  *membound_p,
+                    char    *datafile_name,
+                    int32_t graph_index,
+                    int64_t loop_iterations)
 {
-    int ret = 0;
-    size_t read_ret;
-    int32_t cacheline[doubleword_per_cacheline];
+    int32_t dword_per_cacheline;
+    int fd;
     
-    read_ret =  read(fd, cacheline, (sizeof(int32_t) * doubleword_per_cacheline)); 
-    if(read_ret != (sizeof(int32_t) * doubleword_per_cacheline))
+    int32_t *cacheline0;
+    size_t read_ret;
+    
+    size_t  mapped_region_size;
+    void    *mapped_region;
+    
+    /*Get the number of int32_t's in a cacheline.*/
+    dword_per_cacheline = get_dword_per_cacheline();
+    if(-1 == dword_per_cacheline)
     {
-        if(-1 == read_ret)
-        {
-            perror("cachelinearray_init: read failed");
-        }
-        else
-        {
-            fprintf(stderr, "cachelinearray_init: read returned fewer bytes "
-                            "than requested");
-        }
-        ret = -1;
+        fprintf(stderr, "membound_init: get_dword_per_cacheline failed!\n");
         goto error0;
     }
     
-    mapped_region_size = cacheline[graph_index];
+    /*Open the input file.*/
+    fd = open(datafile_name, O_RDONLY);
+    if(-1 == fd)
+    {
+        fprintf(stderr, "membound_init: Failed to open the input file: \"%s\". ", 
+                        datafile_name);
+        perror("open failed");
+        goto error0;
+    }
+    
+    /*Allocate a single cache-line-sized space on the stack.*/
+    cacheline0 = (int32_t*)malloc(sizeof(int32_t) * dword_per_cacheline);
+    if(NULL == cacheline0)
+    {
+        perror( "membound_init: Failed to allocate a single cacheline-sized "
+                "block of memory");
+        goto error1;
+    }
+    
+    /*Read the data-file header.*/
+    read_ret =  read(fd, cacheline0, (sizeof(int32_t) * dword_per_cacheline)); 
+    if(read_ret != (sizeof(int32_t) * dword_per_cacheline))
+    {
+        if(-1 == read_ret)
+        {
+            perror( "membound_init: Failed to read data file header. read"
+                    " failed");
+        }
+        else
+        {
+            fprintf(stderr, "membound_init: read returned fewer bytes "
+                            "than requested.\n");
+        }
+        goto error2;
+    }
+    
+    /*Determine the size of the desired memory mapped region from the data-file 
+    header*/
+    mapped_region_size = cacheline0[graph_index];
+    
+    /*Map the data file into memory*/
     mapped_region = mmap(   NULL, mapped_region_size, 
                             PROT_READ, 
                             (MAP_PRIVATE | MAP_LOCKED | MAP_POPULATE),
                             fd, (off_t)0);
     if(MAP_FAILED == mapped_region)
     {
-        perror("cachelinearray_init: mmap failed!");
-        mapped_region = NULL;
-        mapped_region_size = 0;
-        ret = -1;
-        goto error0;
+        perror("membound_init: mmap failed!");
+        goto error2;
     }
     
-    cache_line_array = (int32_t*)mapped_region;
+    /*Free temporarily allocated memory*/
+    free(cacheline0);
     
-error0:
-    return ret;
-}
-
-char *usage_string 
-	= "[-f <input file name>] [-r [-p <real-time priority>]] [-g <loop index>] [ -i <loop iterations>]";
-char *optstring = "f:rp:g:i:";
-
-int main (int argc, char * const * argv)
-{
-	int ret;
-
-    /*Variables for parsing options.*/
-    char    *inputfile_name = "./membound_input.dat";
-    int     fd;
+    /*Set the necessary entries in the membound_t structure*/
+    membound_p->fd = fd;
+    membound_p->mapped_region = mapped_region;
+    membound_p->mapped_region_size = mapped_region_size;
+    membound_p->cacheline_array = (int32_t*)mapped_region;
+    membound_p->graph_index = graph_index;
+    membound_p->dword_per_cacheline = dword_per_cacheline;
+    membound_p->loop_iterations = loop_iterations;
     
-    /*Variables for setting up the scheduling priority.*/
-    unsigned char rflag = 0;
-    double desired_priority = 0.0;
-    
-    /*Variables relating to the workload itself*/
-    int32_t doubleword_per_cacheline;
-    int32_t graphindex = 0;
-    int64_t loopiterations = 10000000000;
-    int32_t m;
-    
-    /*Variables related to timing*/
-    uint64_t	ns_start, ns_end, ns_diff;
-        
-	/*Process input arguments.*/
-	while ((ret = getopt(argc, argv, optstring)) != -1)
-	{
-		switch(ret)
-		{
-            case 'f':
-                inputfile_name = optarg;
-                break;
+    return 0;
 
-            case 'r':
-                rflag = 1;
-                break;
-            
-            case 'p':
-                errno = 0;
-                desired_priority = strtod(optarg, NULL);
-                if( (errno == 0))
-                {
-                    if( (desired_priority >= 0.0) && 
-                        (desired_priority <= 1.0) )
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        fprintf(stderr, "main: Desired priority must be between "
-                                        "0.0 (minimum priority) and 1.0 "
-                                        "(maximum priority).\n");
-                        exit(EXIT_FAILURE);
-                    }
-                }
-                else
-                {
-                    perror("main: Failed to parse the p option");
-                    exit(EXIT_FAILURE);
-                }
-                break;
-
-			case 'i':
-				errno = 0;
-				loopiterations = (uint64_t)strtoull(optarg, NULL, 10);
-				if(errno)
-				{
-					perror("main: Failed to parse the i option");
-					exit(EXIT_FAILURE);
-				}
-				break;
-
-            case 'g':
-                errno = 0;
-				graphindex = (uint32_t)strtoul(optarg, NULL, 10);
-				if(errno)
-				{
-					perror("main: Failed to parse the g option");
-					exit(EXIT_FAILURE);
-				}
-				break;
-
-			default:
-				fprintf(stderr, "main: Bad option %c!\nUsage %s %s!\n", 
-				                (char)ret, argv[0], usage_string);
-				ret = -EINVAL;
-				goto exit0;
-		}
-	}
-
-    /*Check that there are no more arguments.*/
-	if(optind != argc)
-	{
-		fprintf(stderr, "main: Usage %s %s!\n", argv[0], usage_string);
-		ret = -EINVAL;
-		goto exit0;
-	}
-
-    /*Open the input file.*/
-    fd = open(inputfile_name, O_RDONLY);
-    if(-1 == fd)
-    {
-        fprintf(stderr, "main: Failed to open the input file: \"%s\". ", 
-                        inputfile_name);
-        perror("open failed");
-        ret = -EINVAL;
-        goto exit0;
-    }    
-
-    /*Get the number of int32_t's in a cacheline.*/
-    doubleword_per_cacheline = get_doubleword_per_cacheline();
-    if(-1 == doubleword_per_cacheline)
-    {
-        fprintf(stderr, "main: get_doubleword_per_cacheline failed!\n");
-        ret = -1;
-        goto exit1;
-    }
-
-    /*Setup the cache-line array.*/
-    ret = cachelinearray_init(doubleword_per_cacheline, graphindex, fd);
-    if(-1 == ret)
-    {
-        fprintf(stderr, "main: cachelinearray_init failed!\n");
-        goto exit1;
-    }
-
-    /*Setup real-time scheduling parameters if necessary.*/
-    if(1 == rflag)
-    {
-        ret = realtime_init(desired_priority);
-        if(-1 == ret)
-        {
-            fprintf(stderr, "main: realtime_init failed!\n");
-            goto exit1;
-        }
-    }
-
-    /*Time and enter the main loop*/
-    ns_start = getns();
-    m = mainloop(   doubleword_per_cacheline, 
-                    graphindex, 
-                    loopiterations);
-    ns_end = getns();
-    
-    /*Compute the elapsed time*/
-    ns_diff = ns_end - ns_start;
-    
-    /*Print the elapsed time*/
-    printf("\n%s: final m = %i, elapsed time = %lluns\n\n", 
-            argv[0], m, (unsigned long long int)ns_diff);
-    
-    /*Cleanup*/
-    cachelinearray_free();
-exit1:
+    /*Undo all statefull operation in reverse order*/
+error2:
+    free(cacheline0);
+error1:
     close(fd);
-exit0:
-    if(-1 == ret)
-    {
-        fprintf(stderr, "%s: main failed!\n", argv[0]);
-    }
-    
-    return ret;
+error0:
+    *membound_p = (struct membound_s){0};
+    membound_p->fd = -1;
+    membound_p->graph_index = -1;
+    return -1;
 }
 

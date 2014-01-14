@@ -1,20 +1,42 @@
 #define the build commands
 CC=gcc
 CFLAGS=-c -Wall
+AR=ar
+ARFLAGS= -rsv
 
-BINDIR=../../bin
+PeSoRTADIR=..
+PeSoRTAINC=$(PeSoRTADIR)/include
 
-MEMBOUND_SRCDIR=./
-MEMBOUND_DATAFILE=membound_input.dat
+HELPERDIR=$(PeSoRTADIR)/PeSoRTAhelper
+HELPEROBJS=$(HELPERDIR)/PeSoRTA_config.o $(HELPERDIR)/PeSoRTA_string.o
 
-all: $(BINDIR)/membound $(BINDIR)/$(MEMBOUND_DATAFILE)
+SRCDIR=./src
+DATDIR=./data
 
-$(BINDIR)/membound: $(MEMBOUND_SRCDIR)/membound.c
-	gcc -Wall -O3 -o $(BINDIR)/membound $(MEMBOUND_SRCDIR)/membound.c -lrt
+OUTLIBDIR=.
+TARGET=$(OUTLIBDIR)/libPeSoRTA_membound.a
 
-$(BINDIR)/$(MEMBOUND_DATAFILE): $(MEMBOUND_SRCDIR)/generatedatafile.m
-	octave $(MEMBOUND_SRCDIR)/generatedatafile.m $(BINDIR)/$(MEMBOUND_DATAFILE)
+all: $(TARGET) $(DATDIR)/membound_input.dat
 
-clean:
-	rm -rf $(BINDIR)/membound $(BINDIR)/$(MEMBOUND_DATAFILE)
+helperobjs:
+	$(MAKE) -C $(HELPERDIR)
+
+$(DATDIR)/membound_input.dat: $(SRCDIR)/generatedatafile.m
+	octave $(SRCDIR)/generatedatafile.m $(DATDIR)/membound_input.dat
+
+$(SRCDIR)/PeSoRTA_membound.o: $(SRCDIR)/PeSoRTA_membound.c $(SRCDIR)/membound.h $(HELPERDIR)/PeSoRTA_helper.h
+	$(CC) -I $(PeSoRTAINC) -I $(HELPERDIR) $(CFLAGS) $(SRCDIR)/PeSoRTA_membound.c \
+	-o $(SRCDIR)/PeSoRTA_membound.o
+
+$(SRCDIR)/membound.o: $(SRCDIR)/membound.o $(SRCDIR)/membound.h
+	$(CC) $(CFLAGS) $(SRCDIR)/membound.c -o $(SRCDIR)/membound.o
+
+$(TARGET): $(SRCDIR)/PeSoRTA_membound.o $(SRCDIR)/membound.o helperobjs
+	$(AR) $(ARFLAGS) $(TARGET) $(SRCDIR)/PeSoRTA_membound.o $(SRCDIR)/membound.o $(HELPEROBJS)
+
+helperclean:
+	$(MAKE) -C $(HELPERDIR) clean
+
+clean: helperclean
+	rm -f $(TARGET) $(SRCDIR)/PeSoRTA_membound.o $(SRCDIR)/membound.o $(DATDIR)/membound_input.dat
 

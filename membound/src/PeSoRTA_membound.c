@@ -4,11 +4,13 @@
 #include <errno.h>
 #include "PeSoRTA.h"
 #include "PeSoRTA_helper.h"
+#include "membound.h"
 
 typedef struct PeSoRTA_membound_s
 {
     int32_t jobcount;
     int32_t jobcompleted;
+    membound_t membound;
 } PeSoRTA_membound_t;
 
 /*
@@ -20,26 +22,37 @@ char *workload_name(void)
 }
 
 /*
-"-J: number of jobs \n"\
+"-d: name of data file \n"\
+"-g: graph index \n"\
+"-i: loop iterations \n"\
+"-j: number of jobs \n"\
 */
 static int PeSoRTA_membound_parse_config(   char    *configfile_name, 
-                                            int32_t *job_count)
+                                            char    **datafile_name_p,
+                                            int32_t *graph_index_p,
+                                            int64_t *loop_iterations_p,
+                                            int32_t *job_count_p)
 {
-    int ret = 0;
+    int ret;
     FILE *configfile_p;
 
 	/*parsing variables*/
-    char *optstring = "J:";
+    char *optstring = "d:g:i:j:";
     int  opt;
     char *optarg;
+
+    char * const default_filename = "./membound_input.dat";
+    char *datafile_name = default_filename;
+    int32_t graph_index = 0;
+    int64_t loop_iterations = 1000000;
+    int32_t job_count = 10000;
 
     /*Open the config file*/
     configfile_p = fopen(configfile_name, "r");
     if(NULL == configfile_p)
     {
         fprintf(stderr, "ERROR: PeSoRTA_membound_parse_config) fopen failed\n");
-        ret = -1;
-        goto exit0;
+        goto error0;
     }
 
     /*Parse the file, line by line*/
@@ -52,12 +65,10 @@ static int PeSoRTA_membound_parse_config(   char    *configfile_name,
             {
                 fprintf(stderr, "ERROR: PeSoRTA_membound_parse_config) "
                                 "PeSoRTA_getconfigopt failed\n");
-                ret = -1;
-                goto exit1;
+                goto error1;
             }
             else
             {
-                ret = 0;
                 continue;
             }
         }
@@ -65,10 +76,9 @@ static int PeSoRTA_membound_parse_config(   char    *configfile_name,
         if(opt == -1)
         {
                 fprintf(stderr, "ERROR: PeSoRTA_membound_parse_config) config file "
-                                "contains bad line:\n\t\"%s\"\n", optarg);                
-                ret = -1;
+                                "contains bad line:\n\t\"%s\"\n", optarg);
                 free(optarg);
-                goto exit1;
+                goto error1;
         }
 
         if(optarg == NULL)
@@ -76,23 +86,47 @@ static int PeSoRTA_membound_parse_config(   char    *configfile_name,
             fprintf(stderr, "ERROR: PeSoRTA_membound_parse_config) config file contains "
                             "valid option (%c) without argument!\n", (int)opt);
             ret = -1;
-            goto exit1;
+            goto error1;
         }
-        
+    
         switch(opt)
         {
-            case 'J':
-                *job_count = (int32_t)strtol(optarg, NULL, 0);
+            case 'd':
+                datafile_name = optarg;
+                break;
+            case 'g':
+                graph_index = (int32_t)strtol(optarg, NULL, 0);
+                free(optarg);
+                break;
+            case 'i':
+                loop_iterations = (int64_t)strtoll(optarg, NULL, 0);
+                free(optarg);
+                break;
+            case 'j':
+                job_count = (int32_t)strtol(optarg, NULL, 0);
                 free(optarg);
                 break;
         }/*switch(opt)*/
-    }/*while(!feof(configfile_p))*/
+    }/*while(!feof(configfile_p))*/    
     
-exit1:
+    /*Set the output variables*/
+    *datafile_name_p = datafile_name;
+    *graph_index_p = graph_index;
+    *loop_iterations_p = loop_iterations;
+    *job_count_p = job_count;
+    
     fclose(configfile_p);
     
-exit0:
-    return ret;
+    return 0;
+    
+error1:
+    if(default_filename != datafile_name)
+    {
+        free(datafile_name);
+    }
+    fclose(configfile_p);
+error0:
+    return -1;
 }
 
 /*
@@ -105,7 +139,10 @@ int workload_init(char *configfile, void **state_p, long *job_count_p)
 {
     int ret = 0;
     
-    int32_t job_count = 1000;
+    char *datafile_name;
+    int32_t graph_index;
+    int64_t loop_iterations;
+    int32_t job_count;
     
     PeSoRTA_membound_t *workload_state = NULL;
     
@@ -122,7 +159,10 @@ int workload_init(char *configfile, void **state_p, long *job_count_p)
     /*read the config file*/
     if(NULL != configfile)
     {
-        ret = PeSoRTA_membound_parse_config(    configfile, 
+        ret = PeSoRTA_membound_parse_config(configfile,
+                                            &datafile_name,
+                                            &graph_index,
+                                            &loop_iterations,
                                             &job_count);
         if(ret < 0)
         {
@@ -132,6 +172,18 @@ int workload_init(char *configfile, void **state_p, long *job_count_p)
         }
     }
     
+    /*initialize the membound workload*/
+    ret = membound_init(&(workload_state->membound),
+                        datafile_name,
+                        graph_index,
+                        loop_iterations);
+    if(ret < 0)
+    {
+            fprintf(stderr, "ERROR: (membound) workload_init) "
+                            "membound_init failed\n");
+            goto error2;   
+    }
+    
     /*Setup the workload_state data structure*/
     workload_state->jobcount    = job_count;
     workload_state->jobcompleted= 0;
@@ -139,8 +191,13 @@ int workload_init(char *configfile, void **state_p, long *job_count_p)
     *state_p = workload_state;
     *job_count_p = job_count;
     
+    /*Free temporarily allocated memory*/
+    free(datafile_name);
+    
     return 0;
 
+error2:
+    free(datafile_name);
 error1:
     free(workload_state);
 error0:
@@ -164,6 +221,7 @@ int perform_job(void *state)
     }
     else
     {
+        membound_mainloop(&(workload_state->membound));
         (workload_state->jobcompleted)++;
         ret = 0;
     }
@@ -171,9 +229,6 @@ int perform_job(void *state)
     return ret;
 }
 
-/*
-    
-*/
 int workload_uninit(void *state)
 {
     PeSoRTA_membound_t *workload_state = (PeSoRTA_membound_t*)state;
@@ -182,6 +237,9 @@ int workload_uninit(void *state)
     {
         goto exit0;
     }
+
+    /*Free membound-rlated resources*/
+    membound_free(&(workload_state->membound));
 
     /*Free the main workload_state data structure*/
     free(workload_state);       

@@ -113,7 +113,10 @@
     
     indices = (indices')(1:end);
     
-    fid = fopen(outfile_name, 'w');
+    [fid, msg] = fopen(outfile_name, 'w');
+    if -1 == fid
+        error("failed to open \"%s\": %s", outfile_name, msg);
+    end
     fwrite(fid, indices, 'int32');
     fclose(fid);
     

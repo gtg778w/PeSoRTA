@@ -1,6 +1,6 @@
 
 BINS= $(APP_BINDIR)/base_$(APP_NAME) $(APP_BINDIR)/cmusphinx_$(APP_NAME) \
-$(APP_BINDIR)/ffmpeg_$(APP_NAME) $(APP_BINDIR)/sqrwav_$(APP_NAME)
+$(APP_BINDIR)/ffmpeg_$(APP_NAME) $(APP_BINDIR)/sqrwav_$(APP_NAME) $(APP_BINDIR)/membound_$(APP_NAME)
 
 PeSoRTA_apps: $(BINS)
 
@@ -32,6 +32,11 @@ $(APP_BINDIR)/sqrwav_$(APP_NAME): $(APP_OBJS) libPeSoRTA
 	-lPeSoRTA_sqrwav \
 	-lrt
 
+$(APP_BINDIR)/membound_$(APP_NAME): $(APP_OBJS) libPeSoRTA
+	$(CC) $(APP_LIBFLAGS1) -L $(PeSoRTA_LIBDIR) -o $(APP_BINDIR)/membound_$(APP_NAME) \
+	$(APP_OBJS) $(APP_LIBFLAGS2) \
+	-lPeSoRTA_membound
+	
 libPeSoRTA_clean:
 	$(MAKE) -C $(PeSoRTADIR) clean;
 
