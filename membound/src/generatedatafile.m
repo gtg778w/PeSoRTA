@@ -7,7 +7,7 @@
         end
         outfile_name = arg_list{1};
     else
-        outfile_name = './membound_input.dat';
+        outfile_name = [];
     end
 
     sys_cache_dir   = '/sys/devices/system/cpu/cpu0/cache/';
@@ -87,7 +87,7 @@
     indices(2, c_i) = 1;
     indices(1, c_i) = cache_size(1);
     
-    for c_i = 2 : cache_count;
+    for c_i = 2 : cache_count
         if cache_lines(c_i) > 1
             [dummy, sequence] = sort(rand([cache_lines(c_i)-2, 1]));
             sequence = sequence + 1;
@@ -113,10 +113,17 @@
     
     indices = (indices')(1:end);
     
-    [fid, msg] = fopen(outfile_name, 'w');
-    if -1 == fid
-        error("failed to open \"%s\": %s", outfile_name, msg);
-    end
-    fwrite(fid, indices, 'int32');
-    fclose(fid);
-    
+    if(length(outfile_name) == 0)
+        printf("Cache configuration:\n"); disp('');
+        for c_i = 1 : cache_count
+            printf("%i) %i lines, %i bytes\n", c_i, cache_lines(c_i), cache_size(c_i));
+            disp('');
+        end
+    else
+        [fid, msg] = fopen(outfile_name, 'w');
+        if -1 == fid
+            error("failed to open \"%s\": %s", outfile_name, msg);
+        end
+        fwrite(fid, indices, 'int32');
+        fclose(fid);
+    end    
